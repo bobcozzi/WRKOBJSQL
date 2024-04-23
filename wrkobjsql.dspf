@@ -1,0 +1,176 @@
+     A*       Description : Work with SQL Functions and Procedures
+     A*       Author      : R. Cozzi
+     A*       Date        : 01 March 2021
+     A*                     Modification log:
+     A*                     ================
+     A*%%EC
+     A                                      DSPSIZ(27 132 *DS4)
+     A                                      INDARA
+     A                                      CA03
+     A                                      CA05
+     A                                      CF06
+     A                                      CF08
+     A                                      CF09
+     A                                      CA10
+     A                                      CA21
+     A                                      CA22
+     A          R FOOTER
+     A                                 26  3'F3=Exit'
+     A                                      COLOR(BLU)
+     A                                    +3'F6=Check Catalog for Errors'
+     A                                      COLOR(BLU)
+     A                                    +3'F8=Fix Catalog Errors'
+     A                                      COLOR(BLU)
+     A                                    +3'F10=DSPJOBLOG'
+     A                                      COLOR(BLU)
+     A                                    +3'F9=Alt Search'
+     A                                      COLOR(BLU)
+     A                                    +3'F21=Command Line Window'
+     A                                      COLOR(BLU)
+     A          R DETAIL                    SFL
+     A*%%TS  SD  20230407  095951  COZZI       REL-V7R3M0  5770-WDS
+     A            FNSCHEMA     128A  H
+     A            FNSPECNAME   128A  H
+     A            FNNAME       128A  H
+     A            USEROPT        1A  B 10  3
+     A            FNFUNC        32A  O 10  6
+     A            FNTYPE         5A  O 10 39
+     A N41N42                               COLOR(BLU)
+     A  41                                  COLOR(YLW)
+     A  42                                  COLOR(WHT)
+     A            FNLANG         8A  O 10 45
+     A            FNCRTDATE     10A  O 10 54
+     A            FNPARMS        5Y 0O 10 65EDTCDE(Z)
+     A            FNSPEC       192A  O 10 71
+     A          R DISPLAY                   SFLCTL(DETAIL)
+     A*%%TS  SD  20230417  104617  COZZI       REL-V7R3M0  5770-WDS
+     A                                      SFLSIZ(0020)
+     A                                      SFLPAG(0007)
+     A                                      OVERLAY
+     A  21                                  SFLDSPCTL
+     A  21 22                               SFLDSP
+     A N21                                  SFLCLR
+     A                                      SFLDROP(CA11)
+     A N99                                  SFLEND(*MORE)
+     A                                      SFLCSRRRN(&CSRRRN)
+     A  22        CSRPOS         4S 0H      SFLRCDNBR(CURSOR)
+     A            CSRRRN         5S 0H
+     A            PGMNAME       10A  O  1  2COLOR(BLU)
+     A                                  1 45'Work with SQL Objects'
+     A                                      COLOR(BLU)
+     A                                  1 96'(SQL iQuery Tools)'
+     A                                      COLOR(BLU)
+     A                                  1119SYSNAME
+     A                                      COLOR(BLU)
+     A            USRDATE         L  O  2  2DATFMT(*USA)
+     A                                      MAPVAL(('01/01/0001' *CUR))
+     A  82                              2 47'Find Duplicate SQL Objects'
+     A                                      DSPATR(HI)
+     A N82                              2 52'Find SQL Objects'
+     A                                      DSPATR(HI)
+     A                                  2119USER
+     A N82                              3  7'Name to find:'
+     A  82                              3  7'First Schema:'
+     A            SFUNC        108A  B  3 22CHANGE(71)
+     A N82                              4  7'Schema:'
+     A  82                              4  7'Second Schema:'
+     A            SSCHEMA      108A  B  4 22CHANGE(71)
+     A                                  5  7'Search using:'
+     A            SNAME          1A  B  5 22CHANGE(71)
+     A                                  5 26'( N = Name'
+     A                                      COLOR(BLU)
+     A                                  5 43'S = Specific name '
+     A                                      COLOR(BLU)
+     A                                  5 70'* = All'
+     A                                      COLOR(BLU)
+     A                                      DSPATR(UL)
+     A                                  5 79')'
+     A                                      COLOR(BLU)
+     A N82                              6  7'Search for:'
+     A N82        STYPE          1A  B  6 22CHANGE(71)
+     A N82                              6 26'( F = Functions  P = Procedures'
+     A                                      COLOR(BLU)
+     A N82                              6 59'V = Views'
+     A                                      COLOR(BLU)
+     A N82                              6 70'* = All'
+     A                                      COLOR(BLU)
+     A                                      DSPATR(UL)
+     A N82                              6 79')'
+     A                                      COLOR(BLU)
+     A  22                              7  3'Type option, then press Enter.'
+     A                                      COLOR(BLU)
+     A                                      DSPATR(HI)
+     A  22                              8  5'4=Drop  '
+     A                                      COLOR(BLU)
+     A  22                              8 14'5=View'
+     A                                      COLOR(BLU)
+     A  22                              8 23'8=Retrieve SQL Source'
+     A                                      COLOR(BLU)
+     A            ERRMSG        80A  O  8 48COLOR(RED)
+     A  22                              9  2'Opt'
+     A                                      COLOR(WHT)
+     A  22                              9  6'Name'
+     A                                      DSPATR(HI)
+     A  22                              9 39'Type'
+     A                                      DSPATR(HI)
+     A                                  9 45'Language'
+     A                                      DSPATR(HI)
+     A  22                              9 55'Created'
+     A                                      DSPATR(HI)
+     A                                  9 65'Parms'
+     A                                      DSPATR(HI)
+     A                                  9 71'Spec name: External Name(extern pr-
+     A                                      oc) -- Parameters'
+     A                                      DSPATR(HI)
+     A          R PUNCHLIST                 SFL
+     A            HCMDSTG      640A  H
+     A            OPT            1A  B  6  2VALUES('1' 'X' '4') CHECK(AB)
+     A                                      DSPATR(MDT)
+     A            CMDSTG       128A  O  6  5
+     A          R CONFIRM                   SFLCTL(PUNCHLIST)
+     A*%%TS  SD  20211117  070439  COZZI       REL-V7R3M0  5770-WDS
+     A                                      SFLSIZ(0021)
+     A                                      SFLPAG(0019)
+     A                                      CA12
+     A                                      OVERLAY
+     A  31                                  SFLDSPCTL
+     A  31 32                               SFLDSP
+     A N31                                  SFLCLR
+     A N99                                  SFLEND(*MORE)
+     A            PGMNAME       10A  O  1  2COLOR(BLU)
+     A                                  1 45'Work with SQL Objects'
+     A                                      DSPATR(HI)
+     A                                  1103SYSNAME
+     A            USRDATE         L  O  2  2DATFMT(*USA)
+     A                                      MAPVAL(('01/01/0001' *CUR))
+     A                                  2 15'Options:'
+     A                                      COLOR(BLU)
+     A                                  2 25'(Y N)'
+     A                                  2 50'Confirmation Panel'
+     A                                      COLOR(BLU)
+     A                                      DSPATR(RI)
+     A                                  2103USER
+     A                                  3 16'Restrict . . .'
+     A            RESTRICT       1A  B  3 31CHECK(AB)
+     A                                      VALUES('Y' 'R' 'N')
+     A                                  3 35'(Use RESTRICTive DROP)'
+     A                                  4 16'Log Drop stmt:'
+     A            LOGMSG         1A  B  4 31CHECK(AB)
+     A                                      VALUES('Y' 'R' 'N')
+     A                                  4 35'(Write DROP stmt to the joblog)'
+     A                                  5  1'Opt'
+     A                                      COLOR(WHT)
+     A                                  5  5'Press Enter to Confirm that the fo-
+     A                                      llowing DROP statement should be ru-
+     A                                      n.'
+     A                                      DSPATR(HI)
+     A                                  5 87'Enter=Confirm'
+     A                                      COLOR(BLU)
+     A                                  5103'F12=Cancel'
+     A                                      COLOR(BLU)
+     A          R CONFIRMFN
+     A*%%TS  SD  20211117  070439  COZZI       REL-V7R3M0  5770-WDS
+     A                                 26  3'Enter=Confirm'
+     A                                      COLOR(BLU)
+     A                                 26 19'F12=Cancel'
+     A                                      COLOR(BLU) 
