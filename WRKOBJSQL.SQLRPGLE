@@ -718,10 +718,11 @@
                    CAST('' AS VARCHAR(10)) AS DETERM,
                    'VIEW' AS FNTYPE,
                    'VIEW' AS RTNTYPE,
-                   TABLE_SCHEMA AS RTNLIB,
-                   TABLE_NAME AS RTNNAME,
-                   SYSTEM_VIEW_SCHEMA AS SPECLIB,
-                   SYSTEM_VIEW_NAME AS SPECNAME,
+                -- Modified correlational names to match SYSROUTINES
+                   TABLE_SCHEMA AS ROUTINE_SCHEMA,
+                   TABLE_NAME AS ROUTINE_NAME,
+                   SYSTEM_VIEW_SCHEMA AS SPECIFIC_SCHEMA,
+                   SYSTEM_VIEW_NAME AS SPECIFIC_NAME,   
                    VD.OBJTEXT AS TEXT,
                    CAST('' AS VARCHAR(10)) AS EXTNAME,
                    CAST(
