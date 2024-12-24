@@ -2,6 +2,7 @@
 Work with SQL Objects for IBM i
 <p>The WRKOBJSQL command allows you to view a list of SQL-related objects for the specified library. 
 You may do things like retrieve the SQL source code that was used to create the SQL object, view that source code, delete (drop) the object and more.</p>
+<p>This version supports all SQL types. Previously it supported UDTF, UDF, PROC, and some VIEWs. Now all SQL types are visible to the users.</p>
 <h3>Compiling instructions</h3>
 <p>After uploading the source code to your IBM i source file members, use the following CL commands to create this utility.</p>
 <p>Step 1: Create the Command Definition Object</p>
