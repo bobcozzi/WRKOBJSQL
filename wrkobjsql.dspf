@@ -32,6 +32,7 @@
      A            FNSCHEMA     128A  H
      A            FNSPECNAME   128A  H
      A            FNNAME       128A  H
+     A            FNSQLTYPE     18A  H
      A            USEROPT        1A  B 10  3
      A            FNFUNC        32A  O 10  6
      A            FNTYPE         5A  O 10 39
@@ -173,4 +174,4 @@
      A                                 26  3'Enter=Confirm'
      A                                      COLOR(BLU)
      A                                 26 19'F12=Cancel'
-     A                                      COLOR(BLU) 
+     A                                      COLOR(BLU)
