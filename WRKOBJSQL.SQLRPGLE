@@ -4,6 +4,9 @@
       * Author      : R. Cozzi, Jr.
       *               Maintenance log
       *               ================
+      *               Switched to all "native" interfaces
+      *               Now include all SQL objects (sequence, indexes, etc)
+      *               Corrected logical parms on call to Generate_SQL.
       *******************************************************
        CTL-OPT
            copyright('(c) 2021 by R. Cozzi, Jr. All Right Reserved.')
@@ -16,7 +19,7 @@
        dcl-f WRKOBJSQL workstn sfile(detail:RRN) indds(INDDS) infds(WSDS)
                              sfile(punchList:confirmRRN);
 
-      /INCLUDE cozTools/qcpysrc,fKeys
+      /INCLUDE COZTOOLSRC/qcpysrc,fKeys
 
            dcl-ds psds Qualified psds;
              pgmName *PROC;
@@ -43,8 +46,8 @@
              PARMS    VARCHAR(16);
              PARMCNT  INT(5);
              DETERM   VARCHAR(32);
+             SQLOBJTYPE VARCHAR(18);
              FNTYPE   VARCHAR(8);
-             RTNTYPE  VARCHAR(4);
              RTNLIB   VARCHAR(128);
              RTNNAME  VARCHAR(128);  // Function Name
              SPECLIB  VARCHAR(128);
@@ -58,8 +61,8 @@
              iPARMS    int(5);
              iPARMCnt  int(5);
              iDETERM   int(5);
+             iSQLOBJ   int(5);
              iFNTYPE   int(5);
-             iRTNTYPE  int(5);
              iRTNLIB   int(5);
              iRTNNAME  int(5);
              iSPECLIB  int(5);
@@ -245,13 +248,13 @@
                  endif;
                  if (USEROPT = '2');  // Edit/Change
                     bRefresh = *ON;
-                 elseif (USEROPT = '4'); // Drop (delete) the UDF
-                    dropFn( fnType : fnSchema : fnSpecName);
+                 elseif (USEROPT = '4'); // Drop (delete) the item
+                    dropFn( FNSQLTYPE : fnSchema : fnSpecName);
                     bConfirm = *ON;
-                 elseif (USEROPT = '5'); // Display SQL Source for this UDF
-                    rtvsrc( fnType : fnSchema : fnSpecName : USEROPT);
-                 elseif (USEROPT = '8'); // Display SQL Source for this UDF
-                    rtvsrc( fnType : fnSchema : fnSpecName : '2');
+                 elseif (USEROPT = '5'); // Display SQL Source for this item
+                    rtvsrc( FNSQLTYPE : fnSchema : fnSpecName : USEROPT);
+                 elseif (USEROPT = '8'); // Edit SQL Source for this item
+                    rtvsrc( FNSQLTYPE : fnSchema : fnSpecName : '2');
                  elseif (USEROPT <> ' ');
                    errMsg = 'Option ' + %trim(userOpt) + ' invalid.';
                    leave;
@@ -350,6 +353,7 @@
              fnName = ds.RTNNAME;
              fnFunc = ds.RTNNAME;
              fnType = ds.FNTYPE;
+             fnSQLType = ds.SQLOBJTYPE;
              fnCRTDATE = ds.CRTDATE;
              fnLang    = ds.LANG;
              fnParms   = ds.ParmCnt;
@@ -361,7 +365,12 @@
                fnSpec = %trimR(fnSpec) + ' DETERMINISTIC';
              endif;
 
-             rrn += 1;
+             if (RRN < 5000);
+               rrn += 1;
+             else;
+               sqlstate = '02000';
+               leave;
+             endif;
              indds.Func = *OFF;  // Shouldn't need these two "setoffs"
              indds.Proc = *OFF;  // But in the subfile it wasn't working 100%
              indds.Func = (fnType = 'UDTF' or fnType = 'UDF');
@@ -409,7 +418,7 @@
 
           dcl-proc dropFn;
             dcl-pi dropFn;
-               fType varchar(4) const;
+               fType varchar(18) const;
                fLib  varchar(128) const;
                fName varchar(128) const;
             end-Pi;
@@ -479,7 +488,7 @@
 
           dcl-proc rtvsrc;
            dcl-pi rtvsrc;
-             fType varchar(20) const;
+             fType varchar(18) const;
              fLib  varchar(128) const;
              fName varchar(128) const;
              fOpt  char(2) const options(*NOPASS);
@@ -487,7 +496,7 @@
 
            dcl-s objtype varchar(32);
            dcl-s strseu  varchar(128)
-            inz('STRSEU SRCFILE(QTEMP/IQ_TEMPSRC) SRCMBR(IQ_QSQLMBR) OPTION(');
+            inz('STRSEU SRCFILE(QTEMP/IQ_TEMPSRC) SRCMBR(IQ_QRTVSRC) OPTION(');
 
            IF (%PARMS() >= %ParmNum(fOpt) and fOpt <> '');
               if (fOpt = '8');
@@ -501,11 +510,11 @@
 
             exec SQL VALUES upper(:fType) into :objType;
 
-            if (objType = 'PROC');
+            if (%SUBST(objType:1:4) = 'PROC');
               objType = 'PROCEDURE';
-            elseif (objType = 'FUNC') or
-                   (objType = 'UDTF') or
-                   (objType = 'UDF');
+            elseif (%SUBST(objType:1:4) = 'FUNC') or
+                   (%SUBST(objType:1:4) = 'UDTF') or
+                   (%SUBST(objType:1:3) = 'UDF');
               objType = 'FUNCTION';
             else;
               objType = %Trim(fType);
@@ -517,12 +526,12 @@
             endmon;
             MONITOR;
               system('ADDPFM FILE(QTEMP/IQ_TEMPSRC) +
-                               MBR(IQ_QSQLMBR) SRCTYPE(SQL)');
+                               MBR(IQ_QRTVSRC) SRCTYPE(SQL)');
             on-error;  // do nothing
             endmon;
             MONITOR;
               system('CLRPFM FILE(QTEMP/IQ_TEMPSRC) +
-                               MBR(IQ_QSQLMBR)');
+                               MBR(IQ_QRTVSRC)');
             on-error;  // do nothing
             endmon;
             EXEC SQL call qsys2.generate_SQL(
@@ -532,13 +541,13 @@
                            database_object_LIBRARY_NAME => rTrim(:fLib),
                            database_source_file_name => 'IQ_TEMPSRC',
                            database_source_file_library_name => 'QTEMP',
-                           database_source_file_member => 'IQ_QSQLMBR',
-                           replace_option => 1,
-                           statement_formatting_option=> 0,
+                           database_source_file_member => 'IQ_QRTVSRC',
+                           replace_option => '1',
+                           statement_formatting_option=>'0',
                            naming_option => 'SQL',
-                           standards_option => 0,
-                           header_option => 0,
-                           system_name_option => 1
+                           standards_option => '0',
+                           header_option => '0',
+                           system_name_option => '1'
                    );
            system(%trimR(strseu));
           end-proc;
@@ -551,8 +560,8 @@
                  :ds.PARMS:ds.iParms,    -- VARCHAR(16)
                  :ds.PARMCNT:ds.iParmCnt, --   int(5)
                  :ds.DETERM,   -- VARCHAR(16),
-                 :ds.FNTYPE,   -- VARCHAR(8),
-                 :ds.RTNTYPE,  -- VARCHAR(4),
+                 :ds.FNTYPE,   -- VARCHAR(5),
+                 :ds.SQLOBJTYPE,  -- VARCHAR(18)
                  :ds.RTNLIB,   -- VARCHAR(128)
                  :ds.RTNNAME,  -- VARCHAR(128)
                  :ds.SPECLIB,   -- VARCHAR(128)
@@ -667,17 +676,17 @@
                     ELSE ''
                     END
                END AS CALL_TYPE,
-               CASE
-                 WHEN LEFT(ROUTINE_TYPE, 4) = 'FUNC' THEN
-                     CASE FUNCTION_TYPE
-                       WHEN 'S' THEN 'UDF'
-                       WHEN 'T' THEN 'UDTF'
-                       WHEN 'C' THEN 'COLUMN'
-                       ELSE ' '
-                     END
-                 ELSE LEFT(ROUTINE_TYPE, 4)
+               CASE FUNCTION_TYPE
+                WHEN 'S' THEN 'UDF'   -- Scalar Fn
+                WHEN 'T' THEN 'UDTF'  -- Table Fn
+                WHEN 'C' THEN 'COLUMN' -- Column Fn
+                WHEN 'P' THEN 'PROC'  -- Procedure
+                ELSE CASE WHEN LEFT(ROUTINE_TYPE, 4) = 'PROC'
+                          THEN 'PROC'
+                          ELSE LEFT(ROUTINE_TYPE,5) END
                END AS FTYPE,
-               CAST(LEFT(ROUTINE_TYPE, 4) AS VARCHAR(4)) AS TYPE,
+               CAST(LEFT(ROUTINE_TYPE, 9) AS VARCHAR(18)) AS SQLOBJTYPE,
+
                ROUTINE_SCHEMA,
                ROUTINE_NAME,    -- Function Name
                SPECIFIC_SCHEMA,
@@ -711,18 +720,55 @@
                 )
 
             UNION
+             -- Added OBJECT_STATISTICS so that Sequences, Indexes, etc. are
+             -- also included. Only SQL_OBJECT_TYPE <> NULL are retrieved.
+            SELECT 'OBJ' AS ORIGIN,
+                   'N/A' AS LANG,
+                   CAST(NULL AS VARCHAR(10)) AS PARMS,
+                   CAST(NULL AS SMALLINT) AS PARMCount,
+                   CAST('' AS VARCHAR(10)) AS DETERM,
+                   OL.SQL_OBJECT_TYPE as FnType,
+                   OL.SQL_OBJECT_TYPE as SQLOBJTYPE,
+                   OL.OBJLONGSCHEMA   as ROUTINE_SCHEMA,
+                   OL.OBJLONGNAME     as ROUTINE_NAME,
+                   LN.OBJNAME         as SPECIFIC_SCHEMA,
+                   OL.OBJNAME         as SPECIFIC_NAME,
+                   OL.OBJTEXT AS TEXT,
+                   CAST('' AS VARCHAR(10)) AS EXTNAME,
+                   CAST(
+                     VARCHAR_FORMAT(CAST(OL.OBJCREATED AS DATE), :dateFmtEx)
+                      as VARCHAR(10)) AS CRTDATE
+              FROM table(object_statistics(:LIB_ID, '*ALL')) OL
+                  ,LATERAL (select objname
+                        from table(object_statistics('QSYS','*LIB',
+                                                      OL.OBJLONGSCHEMA)) LIB) LN
+             WHERE OL.SQL_OBJECT_TYPE is NOT NULL and
+                   OL.SQL_OBJECT_TYPE NOT IN ('FUNCTION','PROCEDURE','VIEW')
+                   and
+             (
+                  ((:NAME_TP = ' ' or :NAME_TP = 'N') and
+                   OL.OBJNAME LIKE CASE WHEN :FUNC_ID = '' THEN OL.objname
+                                        ELSE :FUNC_ID END)
+               OR
+                 ((:NAME_TP = ' ' or :NAME_TP = 'S') and
+                 OL.OBJLONGNAME LIKE CASE WHEN :FUNC_ID = ''
+                                         THEN OL.OBJLONGNAME
+                                         ELSE :FUNC_ID END)
+                )
+
+            UNION
             SELECT 'VIEW' AS ORIGIN,
                    'SQL/PL' AS LANG,
                    CAST(NULL AS VARCHAR(10)) AS PARMS,
                    CAST(NULL AS SMALLINT) AS PARMCount,
                    CAST('' AS VARCHAR(10)) AS DETERM,
                    'VIEW' AS FNTYPE,
-                   'VIEW' AS RTNTYPE,
+                   'VIEW' AS SQLOBJTYPE,
                 -- Modified correlational names to match SYSROUTINES
                    TABLE_SCHEMA AS ROUTINE_SCHEMA,
                    TABLE_NAME AS ROUTINE_NAME,
                    SYSTEM_VIEW_SCHEMA AS SPECIFIC_SCHEMA,
-                   SYSTEM_VIEW_NAME AS SPECIFIC_NAME,   
+                   SYSTEM_VIEW_NAME AS SPECIFIC_NAME,
                    VD.OBJTEXT AS TEXT,
                    CAST('' AS VARCHAR(10)) AS EXTNAME,
                    CAST(
@@ -734,7 +780,9 @@
                        FROM TABLE (
                            qsys2.object_statistics(
                              V.SYSTEM_VIEW_SCHEMA, '*FILE',
-                             V.SYSTEM_VIEW_NAME)) OD ) VD
+                             V.SYSTEM_VIEW_NAME)) OD
+                         WHERE OD.SQL_OBJECT_TYPE is NOT NULL
+                  ) VD
           WHERE (
                  ((:NAME_TP = ' ' or :NAME_TP = 'N') and
                  v.TABLE_NAME LIKE CASE WHEN :FUNC_ID  = '' THEN v.TABLE_NAME
@@ -806,4 +854,3 @@
             endif;
             return dateFmt2;
            end-proc;
- 
