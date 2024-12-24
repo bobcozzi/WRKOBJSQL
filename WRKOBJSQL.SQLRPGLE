@@ -1,13 +1,18 @@
-      *******************************************************
-      * Program name: Work with SQL Objects
-      * Date        : 01 March 2021
-      * Author      : R. Cozzi, Jr.
-      *               Maintenance log
-      *               ================
-      *               Switched to all "native" interfaces
-      *               Now include all SQL objects (sequence, indexes, etc)
-      *               Corrected logical parms on call to Generate_SQL.
-      *******************************************************
+**FREE
+           // ******************************************************
+           //  Program name: Work with SQL Objects
+           //  Date        : 01 March 2021
+           //  Author      : R. Cozzi, Jr.
+           //  Maintenance log
+           //  ================
+           //  Switched to all **FREE format RPG IV
+           //  Switched to all "native" interfaces
+           //  Now includes all SQL objects (sequence, indexes, etc)
+           //  Corrected logical parms on call to Generate_SQL.
+           //  Expanded the SQLTYPE column (stealing columns from
+           //  the number of parameters and Language columns.)
+           // ******************************************************
+
        CTL-OPT
            copyright('(c) 2021 by R. Cozzi, Jr. All Right Reserved.')
       /IF DEFINED(*CRTBNDRPG)
@@ -16,14 +21,16 @@
            OPTION(*NODEBUGIO:*SRCSTMT)
            EXTBININT(*YES) FIXNBR(*ZONED:*INPUTPACKED);
 
-       dcl-f WRKOBJSQL workstn sfile(detail:RRN) indds(INDDS) infds(WSDS)
-                             sfile(punchList:confirmRRN);
+       dcl-f WRKOBJSQL workstn indds(INDDS) infds(WSDS)
+                               sfile(detail:RRN)
+                               sfile(punchList:confirmRRN);
 
       /INCLUDE COZTOOLSRC/qcpysrc,fKeys
 
            dcl-ds psds Qualified psds;
              pgmName *PROC;
            end-ds;
+
            dcl-ds wsds Qualified;
             fKey   char(1) pos(369);
             sflRRN int(5)  pos(378);
@@ -676,14 +683,17 @@
                     ELSE ''
                     END
                END AS CALL_TYPE,
+
                CASE FUNCTION_TYPE
                 WHEN 'S' THEN 'UDF'   -- Scalar Fn
                 WHEN 'T' THEN 'UDTF'  -- Table Fn
                 WHEN 'C' THEN 'COLUMN' -- Column Fn
                 WHEN 'P' THEN 'PROC'  -- Procedure
-                ELSE CASE WHEN LEFT(ROUTINE_TYPE, 4) = 'PROC'
-                          THEN 'PROC'
-                          ELSE LEFT(ROUTINE_TYPE,5) END
+                WHEN ' ' THEN 'PROC'  -- (blanks in sysroutines means Proc)
+                ELSE CASE
+                      WHEN LEFT(ROUTINE_TYPE, 4) = 'PROC' THEN 'PROC'
+                      ELSE LEFT(ROUTINE_TYPE,7)
+                     END
                END AS FTYPE,
                CAST(LEFT(ROUTINE_TYPE, 9) AS VARCHAR(18)) AS SQLOBJTYPE,
 
@@ -697,7 +707,8 @@
                          as VARCHAR(10)) as CRTDATE
 
           FROM qsys2.sysroutines
-          WHERE (
+          WHERE
+                (
                  ((:NAME_TP = ' ' or :NAME_TP = 'N') and
                  ROUTINE_NAME LIKE CASE WHEN :FUNC_ID  = '' THEN ROUTINE_NAME
                                         ELSE :FUNC_ID END)
@@ -740,10 +751,11 @@
                       as VARCHAR(10)) AS CRTDATE
               FROM table(object_statistics(:LIB_ID, '*ALL')) OL
                   ,LATERAL (select objname
-                        from table(object_statistics('QSYS','*LIB',
-                                                      OL.OBJLONGSCHEMA)) LIB) LN
+                    from table(object_statistics('QSYS','*LIB',
+                                                 OL.OBJLONGSCHEMA)) LIB) LN
              WHERE OL.SQL_OBJECT_TYPE is NOT NULL and
-                   OL.SQL_OBJECT_TYPE NOT IN ('FUNCTION','PROCEDURE','VIEW')
+                   OL.SQL_OBJECT_TYPE
+                          NOT IN ('FUNCTION','ROUTINE','PROCEDURE','VIEW')
                    and
              (
                   ((:NAME_TP = ' ' or :NAME_TP = 'N') and
